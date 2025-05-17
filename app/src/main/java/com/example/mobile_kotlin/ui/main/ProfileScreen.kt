@@ -157,22 +157,6 @@ private fun ProfileContent(
 }
 
 @Composable
-private fun UserInfoSection(user: User) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 24.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        InfoRow("Имя пользователя", user.username)
-        InfoRow("Email", user.email)
-        InfoRow("Дата регистрации", user.registrationDate.toFormattedDate())
-        InfoRow("Страна", user.country)
-        InfoRow("О себе", user.bio.ifEmpty { "Не указано" })
-    }
-}
-
-@Composable
 fun InfoRow(label: String, value: String) {
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -244,7 +228,21 @@ private fun EditProfileDialog(
                     maxLines = 3
                 )
 
-                // Добавьте остальные поля по аналогии
+                OutlinedTextField(
+                    value = editedUser.country,
+                    onValueChange = { editedUser = editedUser.copy(country = it) },
+                    label = { Text("Страна") },
+                    modifier = Modifier.fillMaxWidth(),
+                    maxLines = 3
+                )
+
+                OutlinedTextField(
+                    value = editedUser.address,
+                    onValueChange = { editedUser = editedUser.copy(address = it) },
+                    label = { Text("Адрес") },
+                    modifier = Modifier.fillMaxWidth(),
+                    maxLines = 3
+                )
             }
         },
         confirmButton = {
@@ -298,5 +296,7 @@ private fun UserInfo(user: User) {
         InfoRow("Дата рождения", user.birthDate.toFormattedDate())
         InfoRow("Страна", user.country)
         InfoRow("О себе", user.bio.ifEmpty { "Не указано" })
+        InfoRow("Адрес", user.address.ifEmpty {"Не указано"})
+        InfoRow("Номер телефона", user.phone.ifEmpty {"Не указано"})
     }
 }

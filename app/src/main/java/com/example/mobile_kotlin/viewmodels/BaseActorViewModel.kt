@@ -1,5 +1,6 @@
 package com.example.mobile_kotlin.viewmodels
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.mobile_kotlin.data.model.Actor
@@ -13,7 +14,9 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
@@ -55,16 +58,15 @@ abstract class BaseActorViewModel(
     val availableFilters: StateFlow<FiltersData> = _availableFilters.asStateFlow()
 
     // Источник данных (абстрактный)
-    protected abstract val sourceData: Flow<List<Actor>>
+    protected abstract val sourceData: StateFlow <List<Actor>>
 
     init {
         loadInitialData()
-        setupActorsStream()
     }
 
     private fun loadInitialData() {
         loadAvailableFilters()
-        loadActors() // Инициализируем первую загрузку
+        //loadActors() // Инициализируем первую загрузку
     }
 
     // Основной метод загрузки актеров
@@ -73,7 +75,7 @@ abstract class BaseActorViewModel(
             try {
                 _listState.value = UiState.Loading
                 val actors = sourceData.first()
-                _listState.value = UiState.Success(applyFilters(actors, _filters.value))
+                _listState.value = UiState.Success(applyFilters(actors, filters.value))
             } catch (e: Exception) {
                 _listState.value = UiState.Error(e.message ?: "Ошибка загрузки")
             }
@@ -85,15 +87,16 @@ abstract class BaseActorViewModel(
         this.loadAvailableFilters()
     }
 
-    private fun setupActorsStream() {
+    protected fun setupActorsStream() {
         viewModelScope.launch {
             combine(sourceData, _filters) { actors, filters ->
                 applyFilters(actors, filters)
+            }.catch { e ->
+                _listState.value = UiState.Error("Ошибка потока: ${e.message}")
             }.collect { filteredActors ->
-                _listState.value = if (filteredActors.isEmpty()) {
-                    UiState.Empty
-                } else {
-                    UiState.Success(filteredActors)
+                _listState.value = when {
+                    filteredActors.isEmpty() -> UiState.Empty
+                    else -> UiState.Success(filteredActors)
                 }
             }
         }
@@ -139,7 +142,11 @@ abstract class BaseActorViewModel(
                 actorsRepo.getAwards()
             ) { genres, countries, awards ->
                 FiltersData(genres, countries, awards)
-            }.collect { _availableFilters.value = it }
+            }.catch { e ->
+            _listState.value = UiState.Error("Ошибка фильтров: ${e.message}")
+            }.collect {
+                _availableFilters.value = it
+            }
         }
     }
 

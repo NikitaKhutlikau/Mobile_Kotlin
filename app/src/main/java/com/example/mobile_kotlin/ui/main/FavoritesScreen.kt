@@ -63,7 +63,7 @@ fun FavoritesScreen(navController: NavController) {
         Column(
             modifier = Modifier
                 .padding(padding)
-                .verticalScroll(rememberScrollState())
+                //.verticalScroll(rememberScrollState())
         ) {
             // Фильтры
             FilterChipsRow(
@@ -94,7 +94,8 @@ fun FavoritesScreen(navController: NavController) {
                                 coroutineScope.launch { viewModel.toggleFavorite(actorId) }
                             },
                             onItemClick = { actorId -> navController.navigate("actor_detail/$actorId") },
-                            modifier = Modifier.fillMaxSize()
+                            modifier = Modifier
+                                .fillMaxWidth()
                         )
                     }
                 }

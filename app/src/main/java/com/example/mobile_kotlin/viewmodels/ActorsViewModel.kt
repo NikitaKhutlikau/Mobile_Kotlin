@@ -11,10 +11,12 @@ import com.example.mobile_kotlin.viewmodels.BaseActorViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -23,5 +25,14 @@ class ActorsViewModel @Inject constructor(
     actorsRepo: ActorsRepository,
     authRepo: AuthRepository
 ) : BaseActorViewModel(actorsRepo, authRepo) {
-    override val sourceData: Flow<List<Actor>> = actorsRepo.getActors()
+    override val sourceData: StateFlow<List<Actor>> =
+        actorsRepo.getActors()
+            .stateIn(
+                viewModelScope,
+                SharingStarted.WhileSubscribed(5000),
+                emptyList()
+            )
+    init{
+        setupActorsStream()
+    }
 }

@@ -66,6 +66,7 @@ import org.tensorflow.lite.support.label.Category
 @Composable
 fun ActorDetailScreen(
     actorId: String?,
+    userId: String?,
     navController: NavController
 ) {
     val actorsViewModel: ActorsViewModel = hiltViewModel()
@@ -108,6 +109,7 @@ fun ActorDetailScreen(
                         actor = actor,
                         countries = countries.countries,
                         reviewsState = reviewsState,
+                        userId = userId
                     )
                 }
                 is UiState.Error -> ErrorMessage((actorState as UiState.Error).message)
@@ -163,6 +165,7 @@ private fun ActorDetailContent(
     actor: Actor,
     countries: List<Country>,
     reviewsState: UiState<List<Review>>,
+    userId: String?
 ) {
     val reviewsViewModel: ReviewsViewModel = hiltViewModel()
 
@@ -185,6 +188,7 @@ private fun ActorDetailContent(
 
         ReviewsSection(
             reviewsState = reviewsState,
+            userId = userId
         )
     }
 }
@@ -211,6 +215,7 @@ private fun StarRating(rating: Float) {
 @Composable
 private fun ReviewsSection(
     reviewsState: UiState<List<Review>>,
+    userId: String?
 ) {
     val viewModel: ReviewsViewModel = hiltViewModel()
 
@@ -228,6 +233,7 @@ private fun ReviewsSection(
             is UiState.Loading -> CircularProgressIndicator(modifier = Modifier.align(Alignment.CenterHorizontally))
             is UiState.Success -> ReviewList(
                 reviews = reviewsState.data,
+                userId = userId,
                 onEdit = { viewModel.updateReview(it.id, it.text, it.rating) },
                 onDelete = { viewModel.deleteReview(it.id) }
             )
@@ -369,6 +375,7 @@ fun ReviewDialog(
 @Composable
 private fun ReviewList(
     reviews: List<Review>,
+    userId: String?,
     onEdit: (Review) -> Unit,
     onDelete: (Review) -> Unit
 ) {
@@ -376,6 +383,7 @@ private fun ReviewList(
         items(reviews) { review ->
             ReviewItem(
                 review = review,
+                userId = userId,
                 onEdit = { onEdit(review) },
                 onDelete = { onDelete(review) }
             )
@@ -387,6 +395,7 @@ private fun ReviewList(
 @Composable
 private fun ReviewItem(
     review: Review,
+    userId: String?,
     onEdit: () -> Unit,
     onDelete: () -> Unit
 ) {
@@ -419,12 +428,14 @@ private fun ReviewItem(
                     text = review.text,
                     modifier = Modifier.padding(vertical = 8.dp)
                 )
-                Row(modifier = Modifier.align(Alignment.End)) {
-                    IconButton(onClick = { isEditing = true }) {
-                        Icon(Icons.Default.Edit, "Редактировать")
-                    }
-                    IconButton(onClick = onDelete) {
-                        Icon(Icons.Default.Delete, "Удалить", tint = Color.Red)
+                if(review.userId == userId) {
+                    Row(modifier = Modifier.align(Alignment.End)) {
+                        IconButton(onClick = { isEditing = true }) {
+                            Icon(Icons.Default.Edit, "Редактировать")
+                        }
+                        IconButton(onClick = onDelete) {
+                            Icon(Icons.Default.Delete, "Удалить", tint = Color.Red)
+                        }
                     }
                 }
             }

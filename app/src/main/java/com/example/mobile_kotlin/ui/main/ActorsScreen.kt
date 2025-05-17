@@ -39,6 +39,7 @@ import com.example.mobile_kotlin.ui.components.FilterChipsRow
 import com.example.mobile_kotlin.ui.components.FullScreenLoader
 import com.example.mobile_kotlin.ui.components.NavBar
 import com.example.mobile_kotlin.ui.components.SearchBar
+import com.example.mobile_kotlin.ui.navigation.Destinations.ACTOR_DETAIL
 import com.example.mobile_kotlin.ui.utils.ErrorMessage
 import com.example.mobile_kotlin.ui.utils.UiState
 import com.example.mobile_kotlin.viewmodels.ActorsViewModel
@@ -75,7 +76,7 @@ fun ActorsScreen(navController: NavController) {
         Column(
             modifier = Modifier
                 .padding(padding)
-                .verticalScroll(rememberScrollState())
+                //.verticalScroll(rememberScrollState())
         ) {
             // Фильтры
             FilterChipsRow(
@@ -103,7 +104,7 @@ fun ActorsScreen(navController: NavController) {
                         onFavoriteClick = { actorId ->
                             coroutineScope.launch { viewModel.toggleFavorite(actorId) }
                         },
-                        onItemClick = { actorId -> navController.navigate("actor_detail/$actorId") },
+                        onItemClick = { actorId -> navController.navigate("$ACTOR_DETAIL/$actorId") },
                         modifier = Modifier.fillMaxSize()
                     )
                 }

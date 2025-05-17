@@ -52,6 +52,7 @@ class AuthViewModel @Inject constructor(
                 try {
                     authRepository.register(email, password, user)
                     _registrationState.value = UiState.Success(Unit)
+                    _isLoggedIn.value = true
                 } catch (e: Exception) {
                     _registrationState.value = UiState.Error(e.message ?: "Ошибка регистрации")
                 }
@@ -61,12 +62,13 @@ class AuthViewModel @Inject constructor(
 
     fun login(email: String, password: String) {
         viewModelScope.launch {
-            _loginState.value = UiState.Loading
+            _registrationState.value = UiState.Loading
             try {
                 authRepository.login(email, password)
-                _loginState.value = UiState.Success(Unit)
+                _registrationState.value = UiState.Success(Unit)
+                _isLoggedIn.value = true
             } catch (e: Exception) {
-                _loginState.value = UiState.Error(e.message ?: "Ошибка входа")
+                _registrationState.value = UiState.Error(e.message ?: "Ошибка входа")
             }
         }
     }

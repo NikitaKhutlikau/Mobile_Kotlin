@@ -1,5 +1,6 @@
 package com.example.mobile_kotlin.data.remote
 
+import android.util.Log
 import com.example.mobile_kotlin.data.model.Actor
 import com.example.mobile_kotlin.data.model.User
 import com.example.mobile_kotlin.data.model.Award
@@ -8,6 +9,7 @@ import com.example.mobile_kotlin.data.model.Favorite
 import com.example.mobile_kotlin.data.model.Genre
 import com.example.mobile_kotlin.data.model.Review
 import com.google.firebase.firestore.DocumentSnapshot
+import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.FirebaseFirestoreSettings
 import com.google.firebase.firestore.ListenerRegistration
@@ -17,6 +19,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.buffer
 import kotlinx.coroutines.flow.callbackFlow
@@ -29,7 +32,7 @@ import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
 
 class FirestoreService @Inject constructor(
-    private val firestore: FirebaseFirestore
+    val firestore: FirebaseFirestore
 ) {
     /*init {
         firestore.firestoreSettings = FirebaseFirestoreSettings.Builder()
@@ -74,15 +77,27 @@ class FirestoreService @Inject constructor(
     fun observeAwards(): Flow<List<Award>> =
         firestore.collection("awards").snapshots().map { it.toObjects(Award::class.java) }
 
-    @OptIn(ExperimentalCoroutinesApi::class)
     fun observeActorsByIds(ids: List<String>): Flow<List<Actor>> = callbackFlow {
         val listeners = mutableListOf<ListenerRegistration>()
 
         ids.chunked(10).forEach { chunk ->
+            if (chunk.size > 10) {
+                throw IllegalArgumentException("Chunk size exceeds Firestore's whereIn limit of 10")
+            }
             val listener = firestore.collection("actors")
                 .whereIn("id", chunk)
                 .addSnapshotListener { snapshot, error ->
-                    val actors = snapshot?.toObjects(Actor::class.java) ?: emptyList()
+                    if (error != null) {
+                        Log.e("Firestore", "Error fetching actors", error)
+                        trySend(emptyList())
+                        return@addSnapshotListener
+                    }
+                    val actors = try {
+                        snapshot?.toObjects(Actor::class.java) ?: emptyList()
+                    } catch (e: Exception) {
+                        Log.e("Firestore", "Conversion error", e)
+                        emptyList()
+                    }
                     trySend(actors)
                 }
             listeners.add(listener)
@@ -91,15 +106,25 @@ class FirestoreService @Inject constructor(
         awaitClose {
             listeners.forEach { it.remove() }
         }
-    }.flatMapLatest { actors -> flowOf(actors) } // Явное указание типа
-     .buffer(Channel.UNLIMITED)
+    }.buffer(Channel.UNLIMITED)
 
     // Для избранного
     suspend fun toggleFavorite(actorId: String, userId: String) {
-        val docRef = firestore.collection("favorites").document("$userId-$actorId")
+        val favoritesDocRef = firestore.collection("favorites").document("$userId-$actorId")
+        val userDocRef = firestore.collection("users").document(userId)
+
         firestore.runTransaction { transaction ->
-            if (transaction.get(docRef).exists()) transaction.delete(docRef)
-            else transaction.set(docRef, Favorite(userId, actorId))
+            val favoritesSnapshot = transaction.get(favoritesDocRef)
+
+            if (favoritesSnapshot.exists()) {
+                // Удаляем из favorites и удаляем actorId из списка пользователя
+                transaction.delete(favoritesDocRef)
+                transaction.update(userDocRef, "favoriteActorIds", FieldValue.arrayRemove(actorId))
+            } else {
+                // Добавляем в favorites и добавляем actorId в список пользователя
+                transaction.set(favoritesDocRef, Favorite(userId = userId, actorId = actorId))
+                transaction.update(userDocRef, "favoriteActorIds", FieldValue.arrayUnion(actorId))
+            }
         }.await()
     }
 

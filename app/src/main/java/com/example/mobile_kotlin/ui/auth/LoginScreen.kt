@@ -46,9 +46,9 @@ import com.example.mobile_kotlin.viewmodels.AuthViewModel
 fun LoginScreen(
     onLoginSuccess: () -> Unit,
     onRegisterClick: () -> Unit,
+    viewModel: AuthViewModel
 ) {
-    val viewModel: AuthViewModel = hiltViewModel()
-    val state by viewModel.loginState.collectAsState()
+    val state by viewModel.registrationState.collectAsState()
 
     LaunchedEffect(state) {
         if (state is UiState.Success) {

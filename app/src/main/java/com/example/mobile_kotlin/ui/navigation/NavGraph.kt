@@ -27,14 +27,15 @@ import com.example.mobile_kotlin.viewmodels.AuthViewModel
 @Composable
 fun NavGraph(
     navController: NavHostController,
+    authViewModel: AuthViewModel
 ) {
-    var isLoggedIn: Boolean = false
+    val isLoggedIn by authViewModel.isLoggedIn.collectAsState()
 
     // Навигация при изменении статуса авторизации
     LaunchedEffect(isLoggedIn) {
         if (isLoggedIn) {
             navController.navigate(Destinations.MAIN) {
-                popUpTo(Destinations.AUTH) { inclusive = true }
+                popUpTo(0) // Очищаем back stack полностью
                 launchSingleTop = true
             }
         } else {
@@ -48,45 +49,36 @@ fun NavGraph(
 
     NavHost(
         navController = navController,
-        startDestination = Destinations.AUTH
+        startDestination = if (isLoggedIn) Destinations.MAIN else Destinations.AUTH
     ) {
         // Группа авторизации
         navigation(startDestination = Destinations.LOGIN, route = Destinations.AUTH) {
             composable(Destinations.LOGIN) { backStackEntry ->
-                val authVm: AuthViewModel = hiltViewModel(backStackEntry)
-
-                if(authVm.isLoggedIn.collectAsState().value){
-                    isLoggedIn = true
-                }
-
                 LoginScreen(
                     onLoginSuccess = {
-                        navController.navigate(Destinations.MAIN) {
-                            popUpTo(Destinations.LOGIN) { inclusive = true }
-                            launchSingleTop = true
-                        }
-                        isLoggedIn = true
+                        //navController.navigate(Destinations.MAIN)
                     },
                     onRegisterClick = {
+                        navController.popBackStack()
                         navController.navigate(Destinations.REGISTER)
-                    }
+                    },
+                    authViewModel
                 )
             }
             composable(Destinations.REGISTER) { backStackEntry ->
-                val authVm: AuthViewModel = hiltViewModel(backStackEntry)
-
-                if(authVm.isLoggedIn.collectAsState().value){
-                    isLoggedIn = true
-                }
 
                 RegisterScreen(
                     onRegisterSuccess = {
-                        navController.popBackStack()
-                        isLoggedIn = true
+                        /*navController.navigate(Destinations.MAIN) {
+                            popUpTo(Destinations.REGISTER) { inclusive = true }
+                            launchSingleTop = true
+                        }*/
                     },
                     onLoginClick = {
                         navController.popBackStack()
-                    }
+                        navController.navigate(Destinations.LOGIN)
+                    },
+                    authViewModel
                 )
             }
         }
@@ -95,19 +87,22 @@ fun NavGraph(
             composable(Destinations.ACTORS) {
                 AuthCheck(
                     navController = navController,
-                    content = { ActorsScreen(navController) }
+                    content = { ActorsScreen(navController) },
+                    authViewModel = authViewModel
                 )
             }
             composable(Destinations.FAVORITES) {
                 AuthCheck(
                     navController = navController, // Добавляем navController
-                    content = { FavoritesScreen(navController) }
+                    content = { FavoritesScreen(navController) },
+                    authViewModel = authViewModel
                 )
             }
             composable(Destinations.PROFILE) { // Добавляем профиль
                 AuthCheck(
                     navController = navController,
-                    content = { ProfileScreen(navController) }
+                    content = { ProfileScreen(navController) },
+                    authViewModel = authViewModel
                 )
             }
             composable(
@@ -119,9 +114,11 @@ fun NavGraph(
                     content = {
                         ActorDetailScreen(
                             actorId = it.arguments?.getString("actorId"),
+                            userId = authViewModel.currentUser.collectAsState().value?.id,
                             navController = navController
                         )
-                    }
+                    },
+                    authViewModel = authViewModel
                 )
             }
         }
@@ -132,9 +129,9 @@ fun NavGraph(
 @Composable
 private fun AuthCheck(
     navController: NavHostController,
-    content: @Composable () -> Unit
+    content: @Composable () -> Unit,
+    authViewModel: AuthViewModel
 ) {
-    val authViewModel: AuthViewModel = hiltViewModel()
     val isLoggedIn by authViewModel.isLoggedIn.collectAsState()
     var handled by remember { mutableStateOf(false) }
 

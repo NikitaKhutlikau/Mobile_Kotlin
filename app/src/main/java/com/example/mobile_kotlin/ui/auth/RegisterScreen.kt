@@ -32,8 +32,8 @@ import com.example.mobile_kotlin.viewmodels.AuthViewModel
 fun RegisterScreen(
     onRegisterSuccess: () -> Unit,
     onLoginClick: () -> Unit,
+    viewModel: AuthViewModel
 ) {
-    val viewModel: AuthViewModel = hiltViewModel()
 
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }

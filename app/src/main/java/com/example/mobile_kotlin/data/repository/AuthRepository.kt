@@ -39,7 +39,11 @@ class AuthRepository @Inject constructor(
     suspend fun register(email: String, password: String, userData: User): Result<Unit> = try {
         val authResult = authService.register(email, password)
         val user = userData.copy(id = authResult.user?.uid ?: "")
-        firestoreService.addDocument("users", user)
+        firestoreService.firestore
+            .collection("users")
+            .document(user.id)
+            .set(user)
+            .await()
         Result.success(Unit)
     } catch (e: Exception) {
         Result.failure(e)
